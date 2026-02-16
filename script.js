@@ -287,30 +287,24 @@ function initPortfolio() {
     });
 }
 
-/* --- Video Logic (Google Drive Embed) --- */
+/* --- Video Logic (Google Drive Direct) --- */
 function initVideo() {
     const playBtn = document.getElementById('video-play-btn');
     const container = document.getElementById('youtube-player-container');
     const cover = document.getElementById('video-cover');
 
-    // Google Drive Preview Link
-    const driveLink = "https://drive.google.com/file/d/1OKhs7SvIVltdpbQO5ElxaSj0A9RUsgLc/preview";
+    // Google Drive Direct Download Link (for video tag)
+    // ID: 1OKhs7SvIVltdpbQO5ElxaSj0A9RUsgLc
+    const videoSrc = "https://drive.google.com/uc?export=download&id=1OKhs7SvIVltdpbQO5ElxaSj0A9RUsgLc";
 
-    // Randomize Cover Frame with Tech Images
+    // Static Cover Image (Placeholder for Video Frame)
+    // Using Drive Thumbnail API to get the actual frame
+    const coverImage = "https://drive.google.com/thumbnail?id=1OKhs7SvIVltdpbQO5ElxaSj0A9RUsgLc&sz=w1200";
+
     if (cover) {
-        const frames = [
-            "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
-            "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
-            "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80",
-            "https://images.unsplash.com/photo-1517077304055-6e89abbf09b0?auto=format&fit=crop&w=1200&q=80"
-        ];
-        const randomFrame = frames[Math.floor(Math.random() * frames.length)];
-        cover.src = randomFrame;
-
-        // Ensure image fills correctly
+        cover.src = coverImage;
+        cover.style.opacity = '0.7'; // Fixed opacity
         cover.style.transition = 'opacity 0.6s ease-in-out';
-        cover.style.opacity = '0';
-        cover.onload = () => cover.style.opacity = '0.7';
     }
 
     if (playBtn && container) {
@@ -319,19 +313,18 @@ function initVideo() {
             if (cover) cover.style.display = 'none';
             playBtn.style.display = 'none';
 
-            // Create Iframe - Immediate Load
-            // Using autoplay=1 in the hash for Drive (though support varies, it helps on some browsers)
-            const autoPlayLink = driveLink;
-
+            // Create Video Tag - Immediate Autoplay
             container.innerHTML = `
-                <iframe 
-                    src="${autoPlayLink}" 
+                <video 
+                    src="${videoSrc}" 
                     width="100%" 
                     height="100%" 
-                    style="border:none;"
-                    allow="autoplay; fullscreen"
-                    allowfullscreen>
-                </iframe>
+                    controls 
+                    autoplay
+                    playsinline
+                    class="w-full h-full object-cover">
+                    Your browser does not support the video tag.
+                </video>
             `;
         });
     }
