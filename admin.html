@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Imago Admin - Gerenciar Projetos</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bg-dark': '#030712',
+                        'bg-card': '#0B1121', // Keeping dark base
+                        'primary': '#3B82F6',
+                        'accent-glow': '#00F0FF',
+                        'text-main': '#FFFFFF',
+                        'text-muted': '#94A3B8',
+                        'border-subtle': 'rgba(255, 255, 255, 0.05)',
+                        'border-strong': 'rgba(255, 255, 255, 0.1)',
+                    },
+                    fontFamily: {
+                        heading: ['Outfit', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                    },
+                    backgroundImage: {
+                        'gradient-primary': 'linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Global Error Handler -->
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            console.error("Global Error (Suppressed Alert):", msg, error);
+            return false;
+        };
+    </script>
+
+    <!-- Supabase (Local) -->
+    <script src="supabase.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Admin Specific Overrides */
+        body {
+            overflow: hidden;
+            /* Prevent body scroll, handle internally */
+        }
+
+        /* Custom Scrollbar matching style.css but thinner for admin density */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            /* Primary color thumb */
+            border-radius: 3px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 240, 255, 0.7);
+            /* Glow on hover */
+        }
+    </style>
+</head>
+
+<body class="font-body text-text-main bg-bg-dark antialiased h-screen flex selection:bg-primary selection:text-white">
+
+    <!-- Login Overlay -->
+    <div id="login-section" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#030712]">
+        <div
+            class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none">
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-purple-500/10 opacity-30">
+        </div>
+
+        <div
+            class="relative bg-bg-card/80 backdrop-blur-md border border-white/10 rounded-2xl w-full max-w-sm p-8 shadow-[0_0_40px_rgba(0,0,0,0.5)] animate-title-entrance text-center">
+
+            <div class="mb-8 flex flex-col items-center">
+                <div
+                    class="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-primary/20 transform rotate-3">
+                    <i class="fa fa-lock text-white text-2xl"></i>
+                </div>
+                <span
+                    class="font-heading text-3xl font-bold text-white tracking-tight drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                    IMAGO<span
+                        class="text-primary text-sm uppercase tracking-widest ml-2 font-bold bg-primary/10 px-2 py-1 rounded-lg border border-primary/20">ADMIN</span>
+                </span>
+                <p class="text-text-muted text-sm mt-3 font-light">Acesso Seguro Restrito</p>
+            </div>
+
+            <div id="login-container" class="space-y-6 text-left">
+                <div>
+                    <label
+                        class="text-xs uppercase text-text-muted font-bold tracking-widest mb-2 block ml-1">E-mail</label>
+                    <input type="email" id="email" required
+                        class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder-white/20 font-body"
+                        placeholder="admin@imago.tech">
+                </div>
+                <div>
+                    <label
+                        class="text-xs uppercase text-text-muted font-bold tracking-widest mb-2 block ml-1">Senha</label>
+                    <input type="password" id="password" required
+                        class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder-white/20 font-body"
+                        placeholder="••••••••">
+                </div>
+                <div id="login-error"
+                    class="hidden text-red-400 text-xs text-center bg-red-500/10 py-3 rounded-xl border border-red-500/20 shadow-inner">
+                </div>
+                <button type="button" id="login-btn" onclick="handleLogin()"
+                    class="w-full bg-gradient-primary hover:brightness-110 text-white font-bold py-3.5 rounded-xl shadow-[0_5px_15px_rgba(59,130,246,0.3)] transform active:scale-95 hover:-translate-y-1 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2">
+                    <i class="fa fa-sign-in"></i> Entrar no Sistema
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Layout (Sidebar + Main) -->
+    <div id="dashboard-section" class="hidden flex w-full h-full relative overflow-hidden">
+        <!-- Background Elements -->
+        <div
+            class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none z-0">
+        </div>
+        <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] -z-10"></div>
+        <div class="absolute bottom-0 left-0 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-[80px] -z-10"></div>
+
+        <!-- Sidebar -->
+        <aside
+            class="w-72 bg-[#050B18]/90 backdrop-blur-md border-r border-white/5 flex flex-col shrink-0 z-20 shadow-xl relative">
+            <!-- Brand -->
+            <div class="h-20 border-b border-white/5 flex items-center px-6 gap-3">
+                <div
+                    class="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                    <i class="fa fa-cube text-white text-sm"></i>
+                </div>
+                <span class="font-heading text-xl font-bold text-white tracking-tight">IMAGO</span>
+            </div>
+
+            <!-- Nav -->
+            <nav class="flex-1 p-6 space-y-2">
+                <p class="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-4 px-3 opacity-60">
+                    Principal</p>
+                <a href="#"
+                    class="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-primary/10 to-transparent border-l-2 border-primary text-white transition-all group rounded-r-lg">
+                    <i class="fa fa-th-large text-primary text-sm w-5 text-center"></i>
+                    <span class="text-sm font-semibold tracking-wide">Projetos</span>
+                </a>
+                <a href="#"
+                    class="flex items-center gap-3 px-4 py-3 text-text-muted hover:text-white hover:bg-white/5 border-l-2 border-transparent transition-all group rounded-r-lg">
+                    <i class="fa fa-users text-sm w-5 text-center"></i>
+                    <span class="text-sm font-medium tracking-wide">Equipe</span>
+                </a>
+
+                <p class="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-4 mt-8 px-3 opacity-60">
+                    Sistema</p>
+                <a href="#"
+                    class="flex items-center gap-3 px-4 py-3 text-text-muted hover:text-white hover:bg-white/5 border-l-2 border-transparent transition-all group rounded-r-lg">
+                    <i class="fa fa-cogs text-sm w-5 text-center group-hover:rotate-90 transition-transform"></i>
+                    <span class="text-sm font-medium tracking-wide">Configurações</span>
+                </a>
+            </nav>
+
+            <!-- User -->
+            <div class="p-6 border-t border-white/5 bg-[#030712]/50 backdrop-blur-md">
+                <div class="flex items-center gap-3 px-1 mb-4">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-700 to-slate-600 border border-white/10 flex items-center justify-center text-xs font-bold text-white shadow-inner relative">
+                        <span class="relative z-10">AD</span>
+                        <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-white/10 to-transparent"></div>
+                    </div>
+                    <div class="flex flex-col overflow-hidden">
+                        <span class="text-xs font-bold text-white">Administrador</span>
+                        <span id="user-email"
+                            class="text-[10px] text-text-muted truncate w-32 font-mono opacity-70">Carregando...</span>
+                    </div>
+                </div>
+                <button id="logout-btn"
+                    class="w-full flex items-center justify-center gap-2 px-3 py-2.5 border border-white/10 rounded-xl text-text-muted hover:text-white hover:bg-white/5 hover:border-white/20 transition-all text-[10px] uppercase tracking-wider font-bold">
+                    <i class="fa fa-sign-out"></i> Sair
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0 bg-transparent relative z-10">
+            <!-- Header -->
+            <header
+                class="h-20 border-b border-white/5 bg-[#030712]/80 backdrop-blur-md flex items-center justify-between px-8 z-30 sticky top-0 transition-all duration-300">
+                <div class="flex flex-col">
+                    <h1 class="text-xl font-heading font-bold text-white tracking-wide">Gerenciamento de Projetos</h1>
+                    <span class="text-xs text-text-muted">v2.1 &bull; Painel de Controle</span>
+                </div>
+                <button id="add-project-btn"
+                    class="bg-gradient-primary hover:brightness-110 text-white px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)] transform hover:-translate-y-0.5">
+                    <i class="fa fa-plus"></i> <span class="hidden sm:inline">Novo Projeto</span>
+                </button>
+            </header>
+
+            <!-- Grid Content -->
+            <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div id="admin-projects-grid"
+                    class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
+                    <!-- Loading State -->
+                    <div class="col-span-full flex flex-col items-center justify-center py-20 opacity-50">
+                        <i class="fa fa-circle-o-notch fa-spin text-primary text-3xl mb-4"></i>
+                        <p class="text-sm font-mono text-text-muted">Sincronizando dados...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Slide-over Sheet (Right Custom Modal) -->
+    <div id="project-modal" class="fixed inset-0 z-50 hidden">
+        <div id="modal-backdrop"
+            class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity opacity-0 duration-300"
+            onclick="closeModal()"></div>
+
+        <div id="modal-sheet"
+            class="absolute top-0 right-0 h-full w-full max-w-2xl bg-[#0B1121] border-l border-white/10 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+
+            <!-- Sheet Header -->
+            <div
+                class="h-20 border-b border-white/10 flex items-center justify-between px-8 bg-[#0F172A]/50 backdrop-blur-md shrink-0">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20">
+                        <i class="fa fa-folder-open text-primary"></i>
+                    </div>
+                    <div>
+                        <h2 id="modal-title" class="text-lg font-bold text-white font-heading">Novo Projeto</h2>
+                        <p class="text-[10px] text-text-muted uppercase tracking-wider">Detalhes do Portfolio</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()"
+                    class="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 text-text-muted hover:text-white transition-all border border-white/5 hover:border-white/10">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Sheet Body -->
+            <div class="flex-1 overflow-y-auto custom-scrollbar p-8 bg-gradient-to-b from-[#0B1121] to-[#050B18]">
+                <form id="project-form" class="space-y-8">
+                    <input type="hidden" id="project-id">
+
+                    <!-- Image Upload -->
+                    <section class="space-y-4">
+                        <label
+                            class="text-[10px] uppercase text-text-muted font-bold tracking-widest flex items-center gap-2">
+                            <i class="fa fa-image text-primary"></i> Imagem de Capa (16:9)
+                        </label>
+                        <div class="relative w-full h-56 border-2 border-dashed border-white/10 rounded-2xl bg-[#0F172A]/30 hover:bg-[#0F172A]/50 hover:border-primary/50 transition-all group flex items-center justify-center overflow-hidden"
+                            id="drop-zone">
+                            <input type="file" id="image-upload" accept="image/*"
+                                class="absolute inset-0 opacity-0 cursor-pointer z-20">
+
+                            <div id="upload-placeholder"
+                                class="text-center pointer-events-none group-hover:scale-105 transition-transform duration-300">
+                                <div
+                                    class="w-12 h-12 rounded-full bg-primary/10 mx-auto mb-3 flex items-center justify-center text-primary border border-primary/20 group-hover:bg-primary group-hover:text-white transition-colors shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                                    <i class="fa fa-cloud-upload text-xl"></i>
+                                </div>
+                                <span class="text-sm font-bold text-white block">Arraste ou clique para upload</span>
+                                <span class="text-[10px] text-slate-500 block mt-1 font-mono">JPG, PNG, WEBP (Max
+                                    5MB)</span>
+                            </div>
+
+                            <img id="image-preview" src=""
+                                class="absolute inset-0 w-full h-full object-cover hidden z-10 transition-opacity duration-300">
+
+                            <button type="button" id="remove-image"
+                                class="absolute top-3 right-3 z-30 bg-red-500 hover:bg-red-600 text-white w-8 h-8 flex items-center justify-center rounded-lg shadow-lg hidden transition-all transform hover:scale-105">
+                                <i class="fa fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </section>
+
+                    <!-- Core Details -->
+                    <section class="space-y-5 pt-2">
+                        <div class="grid grid-cols-2 gap-5">
+                            <div class="space-y-2">
+                                <label
+                                    class="text-[10px] uppercase text-text-muted font-bold tracking-widest ml-1">Título
+                                    (Display)</label>
+                                <input type="text" id="p-title" required
+                                    class="w-full bg-[#0F172A] border border-white/10 rounded-xl py-3 px-4 text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder-white/20"
+                                    placeholder="PERFORMANCE">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] uppercase text-text-muted font-bold tracking-widest ml-1">Nome
+                                    do Projeto</label>
+                                <input type="text" id="p-subtitle" required
+                                    class="w-full bg-[#0F172A] border border-white/10 rounded-xl py-3 px-4 text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder-white/20"
+                                    placeholder="E-commerce V1">
+                            </div>
+                        </div>
+
+                        <!-- Category Custom Select -->
+                        <div class="space-y-2 relative z-30">
+                            <label
+                                class="text-[10px] uppercase text-text-muted font-bold tracking-widest ml-1">Categoria</label>
+                            <input type="hidden" id="p-category" value="websites">
+                            <div id="custom-select-trigger"
+                                class="w-full bg-[#0F172A] border border-white/10 rounded-xl py-3 px-4 text-white cursor-pointer hover:border-white/20 transition-all flex justify-between items-center text-sm group">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="w-6 h-6 rounded bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary group-hover:text-white transition-colors text-primary">
+                                        <i id="selected-icon" class="fa fa-desktop text-xs"></i>
+                                    </div>
+                                    <span id="selected-option-text" class="font-medium">Websites</span>
+                                </div>
+                                <i
+                                    class="fa fa-chevron-down text-xs text-text-muted group-hover:text-white transition-colors"></i>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label
+                                class="text-[10px] uppercase text-text-muted font-bold tracking-widest ml-1">Descrição
+                                Curta</label>
+                            <textarea id="p-description" rows="3"
+                                class="w-full bg-[#0F172A] border border-white/10 rounded-xl py-3 px-4 text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder-white/20 resize-none leading-relaxed"
+                                placeholder="Resumo do projeto para o card..."></textarea>
+                        </div>
+                    </section>
+
+                    <!-- Case Study -->
+                    <section class="space-y-5 pt-6 border-t border-white/5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div class="space-y-2">
+                                <label
+                                    class="text-[10px] uppercase text-blue-400 font-bold tracking-widest ml-1 flex items-center gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> O Desafio
+                                </label>
+                                <textarea id="p-challenge" rows="5"
+                                    class="w-full bg-[#0F172A] border border-white/10 rounded-xl py-3 px-4 text-white text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none transition-all placeholder-white/20 resize-none leading-relaxed"></textarea>
+                            </div>
+                            <div class="space-y-2">
+                                <label
+                                    class="text-[10px] uppercase text-green-400 font-bold tracking-widest ml-1 flex items-center gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> A Solução
+                                </label>
+                                <textarea id="p-solution" rows="5"
+                                    class="w-full bg-[#0F172A] border border-white/10 rounded-xl py-3 px-4 text-white text-sm focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none transition-all placeholder-white/20 resize-none leading-relaxed"></textarea>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Meta -->
+                    <section class="space-y-5 pt-6 border-t border-white/5 pb-20">
+                        <div class="space-y-2">
+                            <label class="text-[10px] uppercase text-text-muted font-bold tracking-widest ml-1">Tech
+                                Stack (Separar por vírgula)</label>
+                            <input type="text" id="p-tags"
+                                class="w-full bg-[#0F172A] border border-white/10 rounded-xl py-3 px-4 text-white text-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder-white/20 font-mono"
+                                placeholder="React, Node.js, AWS, Tailwind">
+                        </div>
+                    </section>
+                </form>
+            </div>
+
+            <!-- Footer Actions -->
+            <div
+                class="p-6 border-t border-white/10 bg-[#0B1121]/95 backdrop-blur flex justify-between items-center shrink-0 z-40 shadow-[0_-5px_20px_rgba(0,0,0,0.3)]">
+                <button onclick="closeModal()"
+                    class="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-text-muted hover:text-white transition-colors hover:bg-white/5 rounded-lg">
+                    Cancelar
+                </button>
+                <button onclick="saveProject(event)"
+                    class="bg-gradient-primary hover:brightness-110 text-white px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)] flex items-center gap-2 transition-all transform hover:-translate-y-0.5">
+                    <i class="fa fa-save"></i> Salvar Projeto
+                </button>
+            </div>
+
+            <!-- Loader -->
+            <div id="modal-loader"
+                class="absolute inset-0 bg-[#030712]/80 flex items-center justify-center z-50 hidden backdrop-blur-sm">
+                <div
+                    class="bg-bg-card border border-white/10 p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-title-entrance">
+                    <i class="fa fa-circle-o-notch fa-spin text-3xl text-primary"></i>
+                    <span class="text-xs font-bold text-white uppercase tracking-widest">Processando...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="delete-modal" class="fixed inset-0 z-[60] hidden items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
+        <div
+            class="relative bg-bg-card border border-red-500/30 rounded-2xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(239,68,68,0.2)] animate-title-entrance">
+            <div
+                class="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-5 border border-red-500/20">
+                <i class="fa fa-exclamation-triangle text-2xl text-red-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2 font-heading">Excluir Projeto?</h3>
+            <p class="text-text-muted text-sm mb-8 leading-relaxed">Esta ação removerá permanentemente o projeto do
+                banco de dados. Não pode ser desfeita.</p>
+            <div class="flex gap-4">
+                <button id="cancel-delete"
+                    class="flex-1 px-4 py-3 border border-white/10 text-text-muted hover:text-white hover:bg-white/5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all">Cancelar</button>
+                <button id="confirm-delete"
+                    class="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider shadow-lg transition-all transform hover:-translate-y-0.5">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dropdown Portal (Fixed Position) -->
+    <div id="custom-options"
+        class="fixed w-full max-w-[200px] bg-[#0F172A] border border-white/10 rounded-xl hidden shadow-2xl z-[9999] ring-1 ring-white/5 py-1 backdrop-blur-xl">
+        <div class="custom-option px-4 py-3 hover:bg-primary/10 cursor-pointer border-b border-white/5 last:border-0 flex items-center gap-3 transition-all group"
+            data-value="websites" data-icon="fa-desktop">
+            <div
+                class="w-6 h-6 rounded bg-white/5 flex items-center justify-center transition-colors group-hover:bg-primary group-hover:text-white text-text-muted">
+                <i class="fa fa-desktop text-xs"></i>
+            </div>
+            <span class="text-xs font-bold text-white group-hover:text-primary transition-colors">Websites</span>
+        </div>
+        <div class="custom-option px-4 py-3 hover:bg-primary/10 cursor-pointer border-b border-white/5 last:border-0 flex items-center gap-3 transition-all group"
+            data-value="automacoes" data-icon="fa-cogs">
+            <div
+                class="w-6 h-6 rounded bg-white/5 flex items-center justify-center transition-colors group-hover:bg-primary group-hover:text-white text-text-muted">
+                <i class="fa fa-cogs text-xs"></i>
+            </div>
+            <span class="text-xs font-bold text-white group-hover:text-primary transition-colors">Automações</span>
+        </div>
+        <div class="custom-option px-4 py-3 hover:bg-primary/10 cursor-pointer border-b border-white/5 last:border-0 flex items-center gap-3 transition-all group"
+            data-value="sistemas" data-icon="fa-database">
+            <div
+                class="w-6 h-6 rounded bg-white/5 flex items-center justify-center transition-colors group-hover:bg-primary group-hover:text-white text-text-muted">
+                <i class="fa fa-database text-xs"></i>
+            </div>
+            <span class="text-xs font-bold text-white group-hover:text-primary transition-colors">Sistemas</span>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+
+</html>
