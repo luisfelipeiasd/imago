@@ -287,23 +287,22 @@ function initPortfolio() {
     });
 }
 
-/* --- Video Logic (Google Drive Direct) --- */
+/* --- Video Logic (Google Drive Embed) --- */
 function initVideo() {
     const playBtn = document.getElementById('video-play-btn');
     const container = document.getElementById('youtube-player-container');
     const cover = document.getElementById('video-cover');
 
-    // Google Drive Direct Download Link (for video tag)
-    // ID: 1OKhs7SvIVltdpbQO5ElxaSj0A9RUsgLc
-    const videoSrc = "https://drive.google.com/uc?export=download&id=1OKhs7SvIVltdpbQO5ElxaSj0A9RUsgLc";
+    // Google Drive Preview Link (Reliable)
+    const driveLink = "https://drive.google.com/file/d/1OKhs7SvIVltdpbQO5ElxaSj0A9RUsgLc/preview";
 
-    // Static Cover Image (Placeholder for Video Frame)
-    // Using Drive Thumbnail API to get the actual frame
+    // Static Cover Image (Thumbnail)
+    // Using Drive Thumbnail API
     const coverImage = "https://drive.google.com/thumbnail?id=1OKhs7SvIVltdpbQO5ElxaSj0A9RUsgLc&sz=w1200";
 
     if (cover) {
         cover.src = coverImage;
-        cover.style.opacity = '0.7'; // Fixed opacity
+        cover.style.opacity = '0.7';
         cover.style.transition = 'opacity 0.6s ease-in-out';
     }
 
@@ -313,18 +312,18 @@ function initVideo() {
             if (cover) cover.style.display = 'none';
             playBtn.style.display = 'none';
 
-            // Create Video Tag - Immediate Autoplay
+            // Load Iframe
+            // Note: Google Drive embeds often block 'autoplay=1' for UX reasons, 
+            // but we add it just in case. The user might need one interactions inside the frame.
             container.innerHTML = `
-                <video 
-                    src="${videoSrc}" 
+                <iframe 
+                    src="${driveLink}?autoplay=1" 
                     width="100%" 
                     height="100%" 
-                    controls 
-                    autoplay
-                    playsinline
-                    class="w-full h-full object-cover">
-                    Your browser does not support the video tag.
-                </video>
+                    style="border:none;"
+                    allow="autoplay; fullscreen"
+                    allowfullscreen>
+                </iframe>
             `;
         });
     }
